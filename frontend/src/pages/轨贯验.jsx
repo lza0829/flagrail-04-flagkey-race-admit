@@ -4,17 +4,39 @@ import { get, post } from "../api.js";
 export default function 轨贯验() {
   const [rows, setRows] = useState([]);
   const [讯, set讯] = useState("");
+  const [核, set核] = useState(null);
   const 刷 = async () => setRows(await get("/贯验"));
   useEffect(() => { 刷().catch((e) => set讯(String(e))); }, []);
   return (
     <div>
       <h1 className="题">轨贯验</h1>
-      <p className="述">入轨版本 ↔ 下发票 ↔ 回读 ↔ 命运 互证。悬空下发 / 回读拧花 / 回滚无命运 → 不通过。</p>
+      <p className="述">
+        入轨版本 ↔ 下发票 ↔ 回读 ↔ 命运 互证。悬空下发 / 回读拧花 / 回滚无命运 /{" "}
+        <b>双当前 / 无钉版 / 世代撞号</b> → 不通过。
+      </p>
       <div className="行">
-        <button onClick={async () => { const g = await post("/贯验"); await 刷(); set讯(g.是否通过 ? "通过" : g.说明); }}>跑贯验</button>
+        <button onClick={async () => {
+          const g = await post("/贯验");
+          set核(g.核证 || null);
+          await 刷();
+          set讯(g.是否通过 ? "通过" : g.说明);
+        }}>跑贯验</button>
         <button className="次" onClick={() => 刷()}>刷新</button>
       </div>
       {讯 && <p className="讯">{讯}</p>}
+      {核 && (
+        <div className="提示条">
+          准入架构 <code>{核.架构}</code> ·{" "}
+          <span className={"徽章 " + (核.有效 ? "通" : "败")}>{核.有效 ? "全键有效" : "存在无效键"}</span>
+          {" · "}
+          {核.项.map((x) => (
+            <span key={x.开关键} style={{ marginRight: 14, display: "inline-block" }}>
+              <code>{x.开关键}</code> 行{x.行数}/活{x.活跃数}/当前{x.当前键 || "空"}/冲{x.冲突数}
+              {" "}<span className={"徽章 " + (x.valid ? "通" : "败")}>{x.valid ? "✓" : "✗"}</span>
+            </span>
+          ))}
+        </div>
+      )}
       {!rows.length ? <div className="空态">尚未跑过贯验</div> : (
         <table>
           <thead><tr><th>#</th><th>时刻</th><th>版本</th><th>下发</th><th>回读</th><th>命运</th><th>结果</th><th>说明</th></tr></thead>

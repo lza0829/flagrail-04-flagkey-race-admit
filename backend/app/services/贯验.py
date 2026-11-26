@@ -1,6 +1,9 @@
 from datetime import datetime, timezone
 
 from app.db import 连接
+from app.modules.开关键竞态准入 import 核证
+
+状态_活跃 = ("已入轨", "灰度中")
 
 
 def 此刻() -> str:
@@ -37,6 +40,27 @@ def 跑贯验() -> dict:
             ).fetchone():
                 问题.append(f"回滚无命运:{r['票号']}")
 
+        # 开关键竞态准入：单胜出 + 当前唯一 + 下发钉版一致
+        核 = 核证(conn)
+        for 项 in 核["项"]:
+            if not 项["valid"]:
+                问题.append(f"准入不一致:{项['开关键']}"
+                            f"(活跃{项['活跃数']}/当前{项['当前键'] or '空'})")
+        for r in conn.execute(
+            "SELECT 票号, 版本键, 钉版, 世代 FROM 下发票 WHERE 状态 IN ('已下发','已回滚')"
+        ):
+            # 钉版必须非空，且钉的就是该票版本键（下发时钉当前）。
+            if not r["钉版"]:
+                问题.append(f"无钉版下发:{r['票号']}")
+            elif r["钉版"] != r["版本键"]:
+                问题.append(f"钉版拧花:{r['票号']}")
+        # 活跃版本世代必须唯一（同键不能有两个版本共用一代）。
+        for r in conn.execute(
+            "SELECT 开关键, 世代, COUNT(*) AS c FROM 开关版本 "
+            "WHERE 状态 IN ('已入轨','灰度中') GROUP BY 开关键, 世代 HAVING c>1"
+        ):
+            问题.append(f"世代撞号:{r['开关键']}#{r['世代']}")
+
         通过 = 1 if not 问题 else 0
         说明 = "齐" if 通过 else "; ".join(问题)
         conn.execute(
@@ -52,6 +76,7 @@ def 跑贯验() -> dict:
             "回读数": 回读数,
             "命运数": 命运数,
             "说明": 说明,
+            "核证": 核,
         }
     finally:
         conn.close()

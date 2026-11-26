@@ -66,6 +66,14 @@ export default function 轨台() {
             <i>05</i>
             <b>{概.命运条}</b>命运
           </span>
+          <span>
+            <i>06</i>
+            <b>{概.冲突单}</b>冲突单
+          </span>
+          <span>
+            <i>07</i>
+            <span className={"徽章 " + (概.准入有效 ? "通" : "败")}>{概.准入有效 ? "单人版 valid" : "无效"}</span>
+          </span>
         </div>
       )}
     </section>

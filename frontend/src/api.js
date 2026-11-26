@@ -9,7 +9,11 @@ export async function post(path, body) {
     headers: { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(await r.text());
+  if (!r.ok) {
+    let 讯 = await r.text();
+    try { 讯 = JSON.parse(讯).detail || 讯; } catch {}
+    throw new Error(讯);
+  }
   return r.json();
 }
 export async function postFixture(name) {
